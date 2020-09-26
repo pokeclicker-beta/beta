@@ -1,0 +1,39 @@
+///<reference path="../Battle.ts"/>
+class GymBattle extends Battle {
+
+    static gym: Gym;
+    static index: KnockoutObservable<number> = ko.observable(0);
+    static totalPokemons: KnockoutObservable<number> = ko.observable(0);
+
+    /**
+     * Award the player with exp, and go to the next pokemon
+     */
+    public static defeatPokemon() {
+        this.enemyPokemon().defeat(true);
+        // Make gym "route" regionless
+        App.game.breeding.progressEggsBattle(this.gym.badgeReward * 3 + 1, GameConstants.Region.none);
+        this.index(this.index() + 1);
+
+        if (this.index() >= this.gym.pokemons.length) {
+            GymRunner.gymWon(this.gym);
+        } else {
+            this.generateNewEnemy();
+        }
+    }
+
+    /**
+     * Reset the counter.
+     */
+    public static generateNewEnemy() {
+        this.counter = 0;
+        this.enemyPokemon(PokemonFactory.generateTrainerPokemon(this.gym.town, this.index()));
+    }
+
+    public static pokemonsDefeatedComputable: KnockoutComputed<number> = ko.pureComputed(function () {
+        return GymBattle.index();
+    });
+
+    public static pokemonsUndefeatedComputable: KnockoutComputed<number> = ko.pureComputed(function () {
+        return GymBattle.totalPokemons() - GymBattle.index();
+    })
+}

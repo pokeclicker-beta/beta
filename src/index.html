@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pokéclicker</title>
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="utf-8"/>
+    <link href="assets/images/favicon.ico" rel="icon" type="image/x-icon"/>
+    <script type="text/html" id="pokemonListTemplate">
+        <tr data-bind='ifnot: $data.breeding'>
+            <td class="text-nowrap">
+                <img class="smallImage"
+                     data-bind="attr:{ src: PokemonHelper.getImage($data, App.game.party.alreadyCaughtPokemon($data.id, true)) }"
+                     src=""/>
+                <span data-bind="text: name">Name</span><sup data-bind="visible: App.game.party.alreadyCaughtPokemon($data.id, true)">✨</sup>
+            </td>
+            <td data-bind="text: attack">Atk</td>
+            <td data-bind="text: level">Lvl</td>
+        </tr>
+    </script>
+
+    <!--jQuery-->
+    <script src="libs/jquery.min.js"></script>
+
+    <!--Knockout-->
+    <script src="libs/knockout-latest.js"></script>
+
+    <!--Sortable-->
+    <script src="libs/Sortable.min.js"></script>
+
+    <!--Minified scripts-->
+    <script src="scripts/script.min.js?v=$VERSION"></script>
+
+    <!--Popper.js-->
+    <script src="libs/popper.min.js"></script>
+
+    <!--Bootstrap-->
+    <link href="libs/bootstrap.min.css" rel="stylesheet">
+    <script src="libs/bootstrap.min.js"></script>
+
+    <!--Notify-->
+    <script src="libs/bootstrap-notify.min.js"></script>
+
+    <!--Motio-->
+    <script src="libs/motio.js"></script>
+
+    <!--Minified styles-->
+    <link href="styles/styles.min.css?v=$VERSION" rel="stylesheet">
+
+    <!-- Google Analytics-->
+    @importif $GOOGLE_ANALYTICS_ID "googleAnalytics.html"
+
+    <style>
+        .loader {
+            position: fixed;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            background-color: #79c9fa;
+            background-size: cover;
+            z-index: 9999;
+        }
+
+        .loader-wrapper {
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
+    </style>
+
+</head>
+<body class="no-select" data-bind="class: 'no-select ' + Settings.getSetting('theme').observableValue()">
+<div id="toaster"></div>
+<link href="https://bootswatch.com/4/yeti/bootstrap.min.css" rel="stylesheet" data-bind="attr: {href: 'https://bootswatch.com/4/' + Settings.getSetting('theme').observableValue() + '/bootstrap.min.css'}">
+
+<!--$DEV_BANNER-->
+@importif $DEV_BANNER "developmentBanner.html"
+
+@import "splash.html"
+
+<!-- Game menu-->
+@import "gameMenu.html"
+
+<!-- Get Keyitem modal-->
+@import "getKeyItem.html"
+
+<!-- Show keyitems modal-->
+@import "itemModal.html"
+
+<!--Templates -->
+@import "templates/currencyTemplate.html"
+@import "templates/caughtStatusTemplate.html"
+@import "templates/eggSVGTemplate.html"
+@import "templates/multiOptionTemplate.html"
+
+<div class="container">
+    <div class="row justify-content-center">
+        <!--The id title is needed for a default marker for money animation to display when not in a wild battle where the playerMoney span is not visible-->
+        <h1 id="gameTitle">Pokéclicker</h1>
+    </div>
+    <div class="row justify-content-lg-center" style="text-align: center">
+
+        <!--The next two divs switch around on large screens. This way, battle screen/map is on top on smaller screens-->
+        <!--left column-->
+        <div id="left-column" class="col-lg-3 col-md-6 order-lg-first">
+
+            <!-- pokeball selector -->
+            @import "pokeballSelector.html"
+
+            <!-- Battle Item container-->
+            @import "battleItemContainer.html"
+
+            <!-- Pokemon List container-->
+            @import "pokemonListContainer.html"
+
+        </div>
+
+        <!--Middle column-->
+        <div id="middle-column" class="col-lg-6 col-md-12 order-md-first">
+            <div id="battleContainer" class="card sortable-disabled border-secondary mb-3">
+
+                <div class="card-header p-0" data-bind="visible: (App.game.gameState === GameConstants.GameState.fighting ||
+                                     App.game.gameState === GameConstants.GameState.dungeon ||
+                                     App.game.gameState === GameConstants.GameState.paused ||
+                                     App.game.gameState === GameConstants.GameState.town ||
+                                     App.game.gameState === GameConstants.GameState.shop ||
+                                     App.game.gameState === GameConstants.GameState.gym ||
+                                     App.game.gameState == GameConstants.GameState.battleFrontier)">
+                    <table width="100%">
+                        <tr>
+                            <td width="33.33%">
+                                <span style="display: inline;">
+                                    <img title="Money" src="assets/images/currency/money.png" height="25px">
+                                    <span id="playerMoney" data-bind="text: App.game.wallet.currencies[GameConstants.Currency.money].toLocaleString('en-US')">0</span>
+                                </span>
+                            </td>
+                            <td width="33.33%">
+                                <span style="display: inline;">
+                                    <img title="Dungeon Tokens&#013;&#010;Gained by capturing Pokémon" src="assets/images/currency/dungeonToken.png" height="25px">
+                                    <span id="playerMoneyDungeon" data-bind="text: App.game.wallet.currencies[GameConstants.Currency.dungeonToken].toLocaleString('en-US')">0</span>
+                                </span>
+                            </td>
+                            <td width="33.33%">
+                                <span style="display: inline;">
+                                    <img title="Quest points" src="assets/images/currency/questPoint.png" height="25px">
+                                    <span id="playerMoneyQuest" data-bind="text: App.game.wallet.currencies[GameConstants.Currency.questPoint].toLocaleString('en-US')">0</span>
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!--RouteBattleView-->
+                <!--Use the base battle layout for fighting, dungeons and battle frontier.-->
+
+                <div class="battle-view card-body p-0 justify-content-center no-gutters no-select"
+                    data-bind="if: (App.game.gameState === GameConstants.GameState.fighting || App.game.gameState === GameConstants.GameState.dungeon || App.game.gameState === GameConstants.GameState.paused || App.game.gameState === GameConstants.GameState.town || App.game.gameState === GameConstants.GameState.gym || App.game.gameState == GameConstants.GameState.battleFrontier),
+                        class: MapHelper.calculateBattleCssClass()">
+
+                    <!-- Route Battles -->
+                    <div class="row justify-content-center no-gutters" data-bind="if: App.game.gameState === GameConstants.GameState.fighting">
+                        <div class="col no-gutters clickable" data-bind="click: function() {Battle.clickAttack()}" style="height: 220px; display: block;">
+                            <h2 class="pageItemTitle" style="display: block;">
+
+                                <!-- ko if: App.game.statistics.routeKills[player.route()]() < GameConstants.ROUTE_KILLS_NEEDED -->
+                                <knockout class="right" data-bind="text: App.game.statistics.routeKills[player.route()]() + ' / ' + GameConstants.ROUTE_KILLS_NEEDED">0/10</knockout>
+                                <!-- /ko -->
+
+                                <knockout class="left">
+                                    Route <knockout data-bind="text: player.route">number</knockout>
+                                    <!--If all Pokémon on the route are caught-->
+                                    <knockout data-bind="if: (!RouteHelper.routeCompleted(player.route(), player.region, true) && RouteHelper.routeCompleted(player.route(), player.region, false))">
+                                        <img title="You have captured all Pokémon on this route!" class="pokeball-smallest"
+                                             src="assets/images/pokeball/Pokeball-small.png"/>
+                                    </knockout>
+
+                                    <!--If all Pokémon on the route are caught shiny-->
+                                    <knockout data-bind="if: RouteHelper.routeCompleted(player.route(), player.region, true)">
+                                        <img title="You have captured all Pokémon shiny on this route!" class="pokeball-smallest"
+                                             src="assets/images/pokeball/Pokeball-shiny-small.png"/>
+                                    </knockout>
+                                </knockout>
+
+                                <knockout>
+                                    <knockout data-bind="text: Battle.enemyPokemon().name">Pokemon name</knockout>
+                                    <knockout data-bind="template: { name: 'caughtStatusTemplate', data: {'status': PartyController.getCaughtStatus(Battle.enemyPokemon().id)}}"></knockout>
+                                </knockout>
+
+                            </h2>
+
+                            <div>
+                                <div data-bind="ifnot: Battle.catching">
+                                    <img class="enemy"
+                                         data-bind="attr:{ src: PokemonHelper.getImage(Battle.enemyPokemon(), Battle.enemyPokemon().shiny) }"
+                                         src=""/>
+                                </div>
+                                <div data-bind="if: Battle.catching" class="catchChance">
+                                    <img class="pokeball-animated"
+                                         data-bind="attr:{ src: 'assets/images/pokeball/' + GameConstants.Pokeball[Battle.pokeball()] + '.png' }"
+                                         src=""/>
+                                    <br>
+                                    Catch Chance:
+                                    <knockout data-bind="text: Battle.catchRateActual() + '%'">Catch Rate</knockout>
+                                </div>
+                            </div>
+                            <div class="progress hitpoints" style="height: 20px;">
+                                <div class="progress-bar bg-danger" role="progressbar"
+                                     data-bind="attr:{ style: 'width:' + Battle.enemyPokemon().healthPercentage() + '%' }"
+                                     aria-valuemin="0" aria-valuemax="100">
+                                     <span data-bind="text: Battle.enemyPokemon().health() + ' / ' + Battle.enemyPokemon().maxHealth()" style="font-size: 12px;"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dungeon Battles -->
+                    <div class="row justify-content-center no-gutters" data-bind="if: App.game.gameState === GameConstants.GameState.dungeon">
+                        <div class="col no-gutters clickable" style="height: 220px; display: block;"
+                            data-bind="click: function() {
+                              if (DungeonRunner.fighting() && !DungeonBattle.catching()) {
+                                DungeonBattle.clickAttack();
+                              } else if (DungeonRunner.map.currentTile().type() === GameConstants.DungeonTile.chest) {
+                                DungeonRunner.openChest();
+                              } else if (DungeonRunner.map.currentTile().type() === GameConstants.DungeonTile.boss && !DungeonRunner.fightingBoss()) {
+                                DungeonRunner.startBossFight();
+                              }
+                            }">
+                            <h2 class="pageItemTitle" style="display: block;">
+                                <knockout data-bind="if: DungeonBattle.enemyPokemon() && DungeonBattle.enemyPokemon().health()">
+                                    <knockout data-bind="text: DungeonBattle.enemyPokemon().name">Pokemon name</knockout>
+                                    <knockout data-bind="template: { name: 'caughtStatusTemplate', data: {'status': PartyController.getCaughtStatus(DungeonBattle.enemyPokemon().id)}}"></knockout>
+                                </knockout>
+                                <knockout data-bind="if: !DungeonBattle.enemyPokemon() || !DungeonBattle.enemyPokemon().health()">
+                                    &nbsp;
+                                </knockout>
+
+                                <knockout class="left">
+                                    <knockout data-bind="text: DungeonRunner.dungeon.name()">Dungeon name</knockout>
+
+                                    <!--If all Pokémon in the dungeon are caught-->
+                                    <knockout data-bind="if: (!DungeonRunner.dungeonCompleted(DungeonRunner.dungeon, true) && DungeonRunner.dungeonCompleted(DungeonRunner.dungeon, false))">
+                                        <img title="You have captured all Pokémon on this route!" class="pokeball-smallest"
+                                             src="assets/images/pokeball/Pokeball-small.png"/>
+                                    </knockout>
+
+                                    <!--If all Pokémon in the dungeon are caught shiny-->
+                                    <knockout data-bind="if: DungeonRunner.dungeonCompleted(DungeonRunner.dungeon, true)">
+                                        <img title="You have captured all Pokémon shiny on this route!"
+                                             class="pokeball-smallest"
+                                             src="assets/images/pokeball/Pokeball-shiny-small.png"/>
+                                    </knockout>
+                                </knockout>
+
+                                <knockout class="right" data-bind="css: { 'text-danger': DungeonRunner.timeLeftSeconds() < 20, 'text-primary': DungeonRunner.timeLeftSeconds() >= 20 }">
+                                    <h4><strong data-bind="text: DungeonRunner.timeLeftSeconds() + 's'"></strong></h4>
+                                </knockout>
+
+                                <div class="progress timer">
+                                    <div class="progress-bar bg-danger" role="progressbar"
+                                         data-bind="attr:{ style: 'width:' + DungeonRunner.timeLeftPercentage() + '%' },
+                                         css: { 'bg-danger': DungeonRunner.timeLeftSeconds() < 20, 'bg-primary': DungeonRunner.timeLeftSeconds() >= 20 }"
+                                         aria-valuemin="0" aria-valuemax="100">
+                                         <span data-bind="text: DungeonRunner.timeLeftSeconds() + 's'" style="font-size: 12px;"></span>
+                                    </div>
+                                </div>
+                            </h2>
+
+                            <!-- ko if: (DungeonRunner.fighting() || DungeonBattle.catching)  -->
+                            <div data-bind="if: DungeonBattle.enemyPokemon">
+                                <div>
+                                    <div data-bind="ifnot: DungeonBattle.catching">
+                                        <img class="enemy"
+                                             data-bind="attr:{ src: PokemonHelper.getImage(DungeonBattle.enemyPokemon(), DungeonBattle.enemyPokemon().shiny) }"
+                                             src=""/>
+                                    </div>
+                                    <div data-bind="if: DungeonBattle.catching" class="catchChance">
+                                        <img class="pokeball-animated"
+                                             data-bind="attr:{ src: 'assets/images/pokeball/' + GameConstants.Pokeball[DungeonBattle.pokeball()] + '.png' }"
+                                             src=""/>
+                                        <br>
+                                        Catch Chance:
+                                        <knockout data-bind="text: DungeonBattle.catchRateActual() + '%'">Catch Rate</knockout>
+                                    </div>
+                                </div>
+                                <div class="progress hitpoints" style="height: 20px;">
+                                    <div class="progress-bar bg-danger" role="progressbar"
+                                         data-bind="attr:{ style: 'width:' + DungeonBattle.enemyPokemon().healthPercentage() + '%'}, css: { 'healthbar-boss': DungeonRunner.fightingBoss(), 'bg-danger': !DungeonRunner.fightingBoss()}"
+                                         aria-valuemin="0" aria-valuemax="100">
+                                         <span data-bind="text: DungeonBattle.enemyPokemon().health() + ' / ' + DungeonBattle.enemyPokemon().maxHealth()" style="font-size: 12px;"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- /ko -->
+                            <!-- ko if: DungeonRunner.map.currentTile().type() === GameConstants.DungeonTile.chest -->
+                            <div>
+                                <img class="dungeon-chest" src="assets/images/dungeons/chest.png"/>
+                            </div>
+                            <!-- /ko -->
+                            <!-- ko if: (DungeonRunner.map.currentTile().type() === GameConstants.DungeonTile.boss && !DungeonRunner.fightingBoss()) -->
+                            <div>
+                                <button class="btn btn-danger dungeon-boss-button">Start Bossfight</button>
+                            </div>
+                            <!-- /ko -->
+                        </div>
+                    </div>
+
+                    <!-- Gym Battles -->
+                    @import "gymView.html"
+
+                    <!-- Battle Frontier Battles -->
+                    @import "battleFrontierView.html"
+
+                    <!--TownView-->
+                    @import "townView.html"
+                </div>
+
+
+                <!-- Display Pokemon Attack, Click Attack damge values-->
+                <div class="card-footer p-0" data-bind="hidden: App.game.gameState === GameConstants.GameState.town">
+                    <table width="100%">
+                        <tr>
+                            <!-- ko ifnot: App.game.gameState === GameConstants.GameState.battleFrontier -->
+                            <td width="50%">
+                              <span style="display: inline;">Pokémon Attack:
+                                  <span data-bind="text: App.game.party.pokemonAttackObservable().toLocaleString('en-US')"></span>
+                              </span>
+                            </td>
+                            <td width="50%">
+                              <span style="display: inline;">Click Attack:
+                                  <span data-bind="text: App.game.party.calculateClickAttack().toLocaleString('en-US')"></span>
+                              </span>
+                            </td>
+                            <!-- /ko -->
+                            <!-- ko if: App.game.gameState === GameConstants.GameState.battleFrontier -->
+                            <td width="100%">
+                                <span style="display: inline;">Pokémon Attack:
+                                    <span data-bind="text: App.game.party.calculatePokemonAttack(PokemonType.None, PokemonType.None, true).toLocaleString('en-US');"></span>
+                                </span>
+                            </td>
+                            <!-- /ko -->
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ko if: App.game.gameState === GameConstants.GameState.dungeon -->
+            <div id="dungeonMap" class="card sortable-disabled border-secondary mb-3 dungeon no-select">
+                <div class="card-header p-0">
+                    <span data-bind="text: DungeonRunner.dungeon.name()"></span>
+                </div>
+                <div class="card-body p-0 text-center">
+                    <table class="dungeon-board">
+                      <tbody data-bind="foreach: DungeonRunner.map.board()">
+                        <tr data-bind="foreach: $data">
+                            <td data-bind=" click: function(){DungeonRunner.map.moveToCoordinates($context.$index(), $parentContext.$index()) }, attr: { class: $data.cssClass}"></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- /ko -->
+
+            <!-- Battle Frontier Information Container  -->
+            @import "battleFrontierInfo.html"
+
+            <div id="middle-sort-column">
+                <div id="townMap" class="card sortable border-secondary mb-3" data-bind="visible: App.game.keyItems.hasKeyItem(KeyItems.KeyItem.Town_map) && (App.game.gameState === GameConstants.GameState.fighting || App.game.gameState === GameConstants.GameState.gym || App.game.gameState === GameConstants.GameState.town||
+                    App.game.gameState === GameConstants.GameState.shop || App.game.gameState === GameConstants.GameState.farm || App.game.gameState === GameConstants.GameState.paused)">
+                    <div class="card-header p-0" data-toggle="collapse" href="#mapBody">
+                        <span data-bind="text: `Town Map (${GameConstants.camelCaseToString(GameConstants.Region[player.region])})`">Town Map</span>
+                    </div>
+                    <div id="mapBody" class="card-body p-0 show">
+                        <p id="mapTooltip" class="btn btn-secondary" style="visibility: hidden;"></p>
+                        <svg id="map" viewBox="0 0 1600 960" preserveAspectRatio="xMaxYMax meet">
+                            <defs>
+                                <lineargradient id="mx-gradient-f8cecc-1-ea583b-1-s-0" x1="0%" x2="0%" y1="0%"
+                                                y2="100%">
+                                    <stop offset="0%" style="stop-color:#909090"></stop>
+                                    <stop offset="100%" style="stop-color:#c1c1c1"></stop>
+                                </lineargradient>
+                                <lineargradient id="mx-gradient-dae8fc-1-7ea6e0-1-s-0" x1="0%" x2="0%" y1="0%"
+                                                y2="100%">
+                                    <stop offset="0%" style="stop-color:#DAE8FC"></stop>
+                                    <stop offset="100%" style="stop-color:#7EA6E0"></stop>
+                                </lineargradient>
+                            </defs>
+
+                            @import "KantoSVG.html"
+                            @import "JohtoSVG.html"
+                            @import "HoennSVG.html"
+                            @import "SinnohSVG.html"
+
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--Right column-->
+        <div id="right-column" class="col-lg-3 col-md-6">
+
+            <!-- Oak Items -->
+            @import "oakItemsContainer.html"
+
+            <!-- Current Quest -->
+            @import "questDisplay.html"
+
+            <!-- Egg Slots/Breeding-->
+            @import "breedingDisplay.html"
+
+            <!-- Shortcuts Menu -->
+            @import "shortcutsContainer.html"
+        </div>
+
+    </div>
+</div>
+
+<!--ShopModal-->
+@import "shopModal.html"
+
+<!-- Receive gym badge Modal -->
+@import "receiveGymBadge.html"
+
+<!-- Achievements Modal -->
+@import "achievementsModal.html"
+
+<!-- Oak Items Modal-->
+@import "oakItemsModal.html"
+
+<!-- Statistics Modal-->
+@import "statisticsModal.html"
+
+<!-- Log Book Modal-->
+@import "logBookModal.html"
+
+<!-- Settings Modal-->
+@import "settingsModal.html"
+
+<!-- Changelog Modal -->
+@import "changelog.html"
+
+<!-- Changelog Modal -->
+@import "eventsModal.html"
+
+<!-- Start Sequence Modal-->
+@import "startSequence.html"
+
+<!-- Pick Starter Modal-->
+@import "pickStarter.html"
+
+<!-- Starter Caught Modal-->
+@import "starterCaught.html"
+
+<!-- Hall of Fame Modal -->
+@import "hallOfFame.html"
+
+<!-- Log Book Modal-->
+@import "nextRegionModal.html"
+
+<!-- Shards Modal -->
+@import "shardsModal.html"
+
+<!-- Breeding Modal-->
+@import "breeding.html"
+
+<!-- Underground Modal -->
+@import "underground.html"
+
+<!-- Pokedex Modal-->
+@import "pokedex.html"
+
+<!-- Statistics Modal-->
+@import "pokemonStatisticsModal.html"
+
+<!-- Badge Case Modal-->
+@import "badgeCase.html"
+
+<!-- Save Modal-->
+@import "saveModal.html"
+
+<!-- Quests Modal-->
+@import "questModal.html"
+
+<!-- Farm Modal-->
+@import "farmModal.html"
+
+<!-- Ship Modal-->
+@import "shipModal.html"
+
+<!-- Safari Modal -->
+@import "safariModal.html"
+
+<!-- Safari Modal -->
+@import "safariBattleModal.html"
+
+</body>
+</html>

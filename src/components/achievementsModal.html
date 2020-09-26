@@ -1,0 +1,49 @@
+<div class="modal  fade" id="achievementsModal" tabindex="-1" role="dialog"
+aria-labelledby="AchievementsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 data-bind="tooltip: { title: 'As you earn achievements, you gain up to 100% (per region) more money and xp from all sources.', trigger: 'hover', placement:'right' }">Achievements Bonus: <u class="text-primary" data-bind="text: AchievementHandler.achievementBonusPercent()"></u></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body table-responsive p-0">
+                <table class="table table-hover table-striped table-sm m-0">
+                    <tbody data-bind="template: { name: 'achievementListTemplate', foreach: AchievementHandler.getAchievementListWithIndex(AchievementHandler.navigateIndex())}">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer justify-content-center">
+                <button class="btn btn-secondary" onclick="AchievementHandler.navigateLeft()"
+                        data-bind=" css: {disabled: AchievementHandler.navigateIndex() === 0}">
+                    <img src="assets/images/leftarrow.png">
+                </button>
+
+                <div data-bind="text: AchievementHandler.navigateIndex()+1 + '/' + (AchievementHandler.getNumberOfTabs()+1)"></div>
+                
+                <button class="btn btn-secondary" onclick="AchievementHandler.navigateRight()"
+                        data-bind=" css: {disabled: AchievementHandler.navigateIndex() ===  AchievementHandler.getNumberOfTabs()}">
+                    <img src="assets/images/rightarrow.png">
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/html" id="achievementListTemplate">
+        <tr data-bind="css: { 'table-success': isCompleted() , 'table-danger': !isCompleted() }">
+            <td style="text-align:left;vertical-align:middle;"><b><span data-bind="text: name">Name</span></b><br>
+                <small><span data-bind="text: description">Description</span></small>
+            </td>
+
+            <td style="vertical-align:middle;"><span data-bind="text: getProgress()">1</span>/<span
+                    data-bind="text: property.requiredValue">2</span>
+            </td>
+            <td style="vertical-align:middle;"><span data-bind="text: getProgressPercentage()"></span>%</td>
+
+            <td style="vertical-align:middle;">+<span data-bind="text: getBonus()"></span>%</td>
+        </tr>
+    </script>
+</div>
