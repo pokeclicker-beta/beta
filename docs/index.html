@@ -47,21 +47,6 @@
     <link href="styles/styles.min.css?v=0.5.3" rel="stylesheet">
 
     <!-- Google Analytics-->
-        <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-171657234-1"></script>
-    <script>
-        if (true) {
-            window.dataLayer = window.dataLayer || [];
-
-            function gtag() {
-                dataLayer.push(arguments);
-            }
-
-            gtag('js', new Date());
-
-            gtag('config', 'UA-171657234-1');
-        }
-    </script>
 
     <style>
         .loader {
@@ -6547,7 +6532,7 @@
                                      data-bind="template: { name: 'caughtStatusTemplate', data: {'status': $data.getCaughtStatus()}}">
                                </span>
                            </knockout>
-                           <img src="" height="36px" data-bind="attr:{ src: 'assets/images/items/' + name().replace(/\W/g, '_') + '.png' }">
+                           <img src="" height="36px" data-bind="attr:{ src: 'assets/images/items/' + name().replace(/[^\w.-\\(\\)]/g, '_') + '.png' }">
                            <p data-bind="text: GameConstants.humanifyString(name())">Item Name</p>
                            <div data-bind="if: $data.isAvailable()">
                                 <span data-bind="template: { name: 'currencyTemplate', data: {'amount': totalPrice(ShopHandler.amount()), 'currency': currency}}"></span>
@@ -7455,7 +7440,7 @@ style="cursor:default" tabindex="-1">
                     </btn>
                 </ul>
             </div>
-            
+
             <div class="modal-body tab-content p-0">
                 <div id="dig" class="tab-pane fade in active show pl-3 pr-3">
                     <div class="row" data-bind="foreach: ['SmallRestore','MediumRestore','LargeRestore']">
@@ -7486,7 +7471,7 @@ style="cursor:default" tabindex="-1">
                             <button class='btn' data-bind="text: Mine.itemsFound() + ' / ' + Mine.itemsBuried() + ' items found'"></button>
                             <button id="mine-prospect-result" type="button" class="btn btn-info" data-html="true"
                                     style="position: absolute; right: 0px; top: 0px; width: auto; height: 41px; padding: 4px;"
-                                    data-bind="tooltip: { title: () => Mine.prospectResult() ?? 'Prospect to get more details', trigger: 'hover', placement:'left' }">
+                                    data-bind="tooltip: { title: () => Mine.prospectResult() || 'Prospect to get more details', trigger: 'hover', placement:'left' }">
                                 ?
                             </button>
                         </div>
@@ -7795,14 +7780,14 @@ aria-labelledby="pokedexModalLabel">
                       <th class="text-left bg-dark">Amount</th>
                     </tr>
                   </thead>
-                  <tbody">
+                  <tbody>
                     <tr>
                       <td class="text-left">Base Attack</td>
                       <td class="text-left tight"><code data-bind="text: pokemonMap[$data].attack.toLocaleString('en-US')">-</code></td>
                     </tr>
                     <tr>
                       <td class="text-left">Current Attack</td>
-                      <td class="text-left tight"><code data-bind="text: (App.game.party.getPokemon($data)?.attack || 0).toLocaleString('en-US')">-</code></td>
+                      <td class="text-left tight"><code data-bind="text: (App.game.party.getPokemon($data) ? App.game.party.getPokemon($data).attack : 0).toLocaleString('en-US')">-</code></td>
                     </tr>
                     <tr>
                       <td class="text-left">Catch Rate</td>
@@ -7823,7 +7808,7 @@ aria-labelledby="pokedexModalLabel">
                       <th class="text-left bg-dark">Amount</th>
                     </tr>
                   </thead>
-                  <tbody">
+                  <tbody>
                     <tr>
                       <td class="text-left">Encountered</td>
                       <td class="text-left tight"><code data-bind="text: App.game.statistics.pokemonEncountered[$data]().toLocaleString('en-US')">-</code></td>
@@ -8152,7 +8137,7 @@ aria-labelledby="badgeCaseModalLabel">
 
 
 <!-- Safari Modal -->
-<div aria-labelledby="safariModal" class="modal fade noselect" id="safariModal" role="dialog" style="cursor:default" tabindex="-1">
+<div aria-labelledby="safariModal" class="modal fade noselect" id="safariModal" role="dialog" style="cursor:default" tabindex="-1" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
         <div class="modal-content">
             <div class="controls" data-bind="visible: Safari.inProgress() && !Safari.inBattle()">
@@ -8246,7 +8231,7 @@ aria-labelledby="badgeCaseModalLabel">
 
 
 <!-- Safari Modal -->
-<div class="modal fade noselect" id="safariBattleModal" tabindex="-1" role="dialog" aria-badgeledby="safariBattleModal">
+<div class="modal fade noselect" id="safariBattleModal" tabindex="-1" role="dialog" aria-badgeledby="safariBattleModal" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-md" role="document">
        <div class="modal-content">
            <div class="modal-body p-0">
